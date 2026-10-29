@@ -29,8 +29,8 @@
 | Resource | Name | URL / ID | Region | Plan | Status |
 |---|---|---|---|---|---|
 | **Frontend** | wonder-bites | https://wonder-bites.netlify.app | — | Free | ✅ Live |
-| **Backend API** | wonder-bites-api | https://wonder-bites-api.onrender.com | Oregon | Free | ⚠️ Deployed, awaiting env vars |
-| **Database** | wonder-bites-db | `dpg-dbhb7j142hec73bvabqg-a` | Oregon | Free | ✅ Available |
+| **Backend API** | wonder-bites-api | https://wonder-bites-api.onrender.com | Oregon | Free | ✅ Live (migrations + seeded) |
+| **Database** | wonder-bites-db | `dpg-dbhb7j142hec73bvabqg-a` | Oregon | Free | ✅ Available (schema pushed + seeded) |
 | **GitHub Repo** | shad-ct/wonder-bites | https://github.com/shad-ct/wonder-bites | — | — | ✅ Public |
 
 ### Key Endpoints
@@ -57,30 +57,30 @@ Add each variable below as a separate key-value pair:
 
 | Key | Value | Notes |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://wonder_bites:b9vvWZLdEMH3EFOOlPZzdwwa1hFgXWNQ@dpg-dbhb7j142hec73bvabqg-a/wonder_bites` | From Render DB dashboard |
-| `DIRECT_URL` | `postgresql://wonder_bites:b9vvWZLdEMH3EFOOlPZzdwwa1hFgXWNQ@dpg-dbhb7j142hec73bvabqg-a/wonder_bites` | Same as DATABASE_URL |
-| `NODE_ENV` | `production` | |
-| `PORT` | `3001` | |
-| `SESSION_SECRET` | `bb0ccaf8e4032e53caad0620202c48fe2f6ac810cc33e9e30210d9102fd483ac` | Generated |
-| `MCP_BEARER_TOKEN` | `af1df3ce8a880f8cd75ffb86afeea7eb749199f01da21824ef88a146656becc5` | Used by OpenClaw |
-| `INITIAL_USERNAME` | `admin` | Seed admin user |
-| `INITIAL_USER_PASSWORD` | *(choose a strong password)* | Seed admin password |
-| `FRONTEND_ORIGIN` | `https://wonder-bites.netlify.app` | CORS allowed origin |
-| `API_PUBLIC_URL` | `https://wonder-bites-api.onrender.com` | Public API base URL |
-| `LOG_LEVEL` | `info` | |
-| `RATE_LIMIT_MAX` | `100` | |
-| `RATE_LIMIT_WINDOW_MS` | `60000` | |
+| `DATABASE_URL` | `postgresql://wonder_bites:b9vvWZLdEMH3EFOOlPZzdwwa1hFgXWNQ@dpg-dbhb7j142hec73bvabqg-a.oregon-postgres.render.com/wonder_bites` | Already set |
+| `DIRECT_URL` | `postgresql://wonder_bites:b9vvWZLdEMH3EFOOlPZzdwwa1hFgXWNQ@dpg-dbhb7j142hec73bvabqg-a.oregon-postgres.render.com/wonder_bites` | Already set |
+| `NODE_ENV` | `production` | Already set |
+| `PORT` | `3001` | Already set |
+| `SESSION_SECRET` | `bb0ccaf8e4032e53caad0620202c48fe2f6ac810cc33e9e30210d9102fd483ac` | Already set |
+| `MCP_BEARER_TOKEN` | `af1df3ce8a880f8cd75ffb86afeea7eb749199f01da21824ef88a146656becc5` | Already set; used by OpenClaw |
+| `INITIAL_USERNAME` | `admin` | Already set |
+| `INITIAL_USER_PASSWORD` | `YccMkanKyITtGTcZSdBQ` | Already set |
+| `FRONTEND_ORIGIN` | `https://wonder-bites.netlify.app` | Already set |
+| `API_PUBLIC_URL` | `https://wonder-bites-api.onrender.com` | Already set |
+| `LOG_LEVEL` | `info` | Already set |
+| `RATE_LIMIT_MAX` | `100` | Already set |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Already set |
 
 ### Get DATABASE_URL (already have it)
 
 Use this exact value for `DATABASE_URL` (and `DIRECT_URL`):
 
 ```
-postgresql://wonder_bites:b9vvWZLdEMH3EFOOlPZzdwwa1hFgXWNQ@dpg-dbhb7j142hec73bvabqg-a/wonder_bites
+postgresql://wonder_bites:b9vvWZLdEMH3EFOOlPZzdwwa1hFgXWNQ@dpg-dbhb7j142hec73bvabqg-a.oregon-postgres.render.com/wonder_bites
 ```
 
 **DB details:**
-- Host: `dpg-dbhb7j142hec73bvabqg-a`
+- Host: `dpg-dbhb7j142hec73bvabqg-a.oregon-postgres.render.com`
 - Port: `5432`
 - Database: `wonder_bites`
 - Username: `wonder_bites`
@@ -95,12 +95,18 @@ Click **Save Changes** — Render will automatically redeploy the API service.
 
 ## 4. How to Access the Application
 
-### Step 1: Complete Render Backend Configuration
+### Step 1: Render Backend Configuration (Already Complete)
 
-1. Open https://dashboard.render.com/web/srv-dbhb8hom7kps73ee1asg
-2. Click **Environment** in the left sidebar
-3. Add all variables from the table in Section 3
-4. Click **Save Changes** — Render will auto-redeploy
+All environment variables are set on the Render dashboard at https://dashboard.render.com/web/srv-dbhb8hom7kps73ee1asg → Environment. The API has been redeployed and is live.
+
+Verify:
+```bash
+curl https://wonder-bites-api.onrender.com/healthz
+# Expected: {"status":"ok"}
+
+curl https://wonder-bites-api.onrender.com/readyz
+# Expected: {"status":"ready","database":"connected"}
+```
 
 ### Step 2: Run Database Migrations & Seed
 
