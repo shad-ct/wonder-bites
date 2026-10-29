@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { ThemeProvider } from '@/hooks/use-theme';
@@ -18,11 +18,10 @@ import { ExecutionHistoryPage } from '@/pages/execution-history';
 import { SettingsPage } from '@/pages/settings';
 
 /**
- * Route protection wrapper requiring user authentication.
+ * Route protection wrapper — no login required; renders the app directly.
  */
 function ProtectedLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -33,10 +32,6 @@ function ProtectedLayout() {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <MainLayout />;
