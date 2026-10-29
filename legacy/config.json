@@ -1,0 +1,4 @@
+{
+  "model": "qwen3:4b",
+  "ollama_url": "http://127.0.0.1:11434"
+}

@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+import email.utils
+import html
+import json
+import random
+import re
+import sqlite3
+import time
+import urllib.request
+import urllib.error
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path.home() / "Projects/wonder-bites"
+REPORTS = ROOT / "reports"
+DATA = ROOT / "history.sqlite3"
+CONFIG = ROOT / "config.json"
+
+FEEDS = [
+    ("PsyPost", "https://www.psypost.org/feed/", "Psychology"),
+    ("Aeon", "https://aeon.co/feed.rss", "Philosophy & Ideas"),
+    ("The Marginalian", "https://www.themarginalian.org/feed/", "Philosophy & Creativity"),
+    ("The Pudding", "https://pudding.cool/rss.xml", "Data Stories & Culture"),
+    ("Information Is Beautiful", "https://feeds.feedburner.com/InformationIsBeautiful", "Data Visualization"),
+    ("Quanta Magazine", "https://www.quantamagazine.org/feed/", "Science & Mathematics"),
+    ("ScienceDaily", "https://www.sciencedaily.com/rss/top/science.xml", "Science & Discovery"),
+    ("arXiv AI", "https://rss.arxiv.org/rss/cs.AI", "Artificial Intelligence"),
+    ("arXiv Language", "https://rss.arxiv.org/rss/cs.CL", "Language & AI"),
+    ("arXiv Neuroscience", "https://rss.arxiv.org/rss/q-bio.NC", "Neuroscience"),
+    ("Greater Good", "https://greatergood.berkeley.edu/site/rss/articles", "Human Behavior"),
+    ("Psychology Today", "https://www.psychologytoday.com/front/feed", "Psychology"),
+]
+
+
+EVERGREEN = [
+    ("The Straw Man Fallacy", "https://yourlogicalfallacyis.com/strawman",
+     "A straw man misrepresents someone's argument and attacks the weaker version. Explain it with a funny everyday disagreement.",
+     "Your Logical Fallacy Is", "Critical Thinking"),
+    ("Ad Hominem", "https://yourlogicalfallacyis.com/ad-hominem",
+     "An ad hominem attacks the person rather than addressing their reasoning. Explain why a flawed person can still make a valid argument.",
+     "Your Logical Fallacy Is", "Critical Thinking"),
+    ("Appeal to Authority", "https://yourlogicalfallacyis.com/appeal-to-authority",
+     "Explore the difference between trusting relevant expertise and treating someone's status as unquestionable proof.",
+     "Your Logical Fallacy Is", "Media Literacy"),
+    ("Probability: Likely Does Not Mean Certain",
+     "https://seeing-theory.brown.edu/basic-probability/index.html",
+     "Explain probability using coins, dice, and everyday predictions. Why can a 90 percent chance still fail to happen?",
+     "Seeing Theory", "Probability & Statistics"),
+    ("How Premises Support a Conclusion",
+     "https://aristotelianlogic.com/courses/the-full-curriculum/",
+     "Introduce premises and conclusions. Explain why a logically valid argument can still start from a false premise.",
+     "Logic Made Accessible", "Philosophy & Logic"),
+    ("Why Notes Sound Like They Belong Together",
+     "https://www.musictheory.net/lessons",
+     "Introduce notes, scales, intervals, and chords using a simple musical analogy.",
+     "MusicTheory.net", "Music & Patterns"),
+    ("How Perspective Creates the Illusion of Depth",
+     "https://drawabox.com/lesson/1",
+     "Explain how perspective makes flat drawings look three-dimensional, with a tiny observation exercise.",
+     "Drawabox", "Art & Spatial Reasoning"),
+    ("Learning Languages Through Patterns",
+     "https://www.languagetransfer.org/courses",
+     "Explore how comparing words and noticing patterns can help language learning, without promising instant fluency.",
+     "Language Transfer", "Language & Learning"),
+    ("Why Knots Hold: Friction and Tension",
+     "https://www.animatedknots.com/",
+     "Explain how rope paths, friction, and tension affect whether a knot holds or slips.",
+     "Animated Knots", "Practical Science"),
+    ("Chess Forks: One Move, Multiple Threats",
+     "https://lichess.org/practice",
+     "Explain how one chess move can attack two targets at once, using a hypothetical board position.",
+     "Lichess Practice", "Strategic Thinking"),
+    ("Photography: Understanding Background Blur",
+     "https://www.cambridgeincolour.com/tutorials.htm",
+     "Explain depth of field and how focus and aperture affect what looks sharp in a photo.",
+     "Cambridge in Colour", "Optics & Photography"),
+    ("Learning by Building Small Projects",
+     "https://www.instructables.com/",
+     "Show how to turn a practical question into a small experiment, test an idea, and learn from failure.",
+     "Instructables", "Making & Experiments"),
+]
+
+def get(url, timeout=20):
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "WonderBites/1.0 (personal learning digest)"}
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read(1_500_000)
+
+def text(node):
+    if node is None:
+        return ""
+    return re.sub(r"\s+", " ", html.unescape(" ".join(node.itertext()))).strip()
+
+def parse_date(value):
+    if not value:
+        return 0
+    try:
+        dt = email.utils.parsedate_to_datetime(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except Exception:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return 0
+
+def fetch_feed(name, url, category):
+    root = ET.fromstring(get(url))
+    found = []
+
+    for item in root.findall(".//item"):
+        title = text(item.find("title"))
+        link = text(item.find("link"))
+        summary = text(item.find("description"))
+        published = text(item.find("pubDate"))
+        if title and link:
+            found.append({
+                "title": title, "url": link, "summary": summary[:3000],
+                "date": parse_date(published), "source": name,
+                "category": category
+            })
+
+    ns = "{http://www.w3.org/2005/Atom}"
+    for item in root.iter(ns + "entry"):
+        title = text(item.find(ns + "title"))
+        link_node = item.find(ns + "link")
+        link = link_node.attrib.get("href", "") if link_node is not None else ""
+        summary = text(item.find(ns + "summary")) or text(item.find(ns + "content"))
+        published = text(item.find(ns + "published")) or text(item.find(ns + "updated"))
+        if title and link:
+            found.append({
+                "title": title, "url": link, "summary": summary[:3000],
+                "date": parse_date(published), "source": name,
+                "category": category
+            })
+    return found
+
+def summarize(item):
+    import re
+
+    cfg = json.loads(CONFIG.read_text())
+
+    prompt = f"""
+Write the finished Wonder Bites lesson only. Do not show reasoning,
+planning, self-talk, commentary, or a preamble.
+
+Use these four headings exactly:
+### The big idea
+### Imagine this
+### Tiny mind experiment
+### Why it matters
+
+Write 150-220 words. Explain the idea clearly to a curious 10-year-old.
+Use one concrete everyday example and one thought-provoking question.
+Never invent statistics, research findings, quotes, or conclusions.
+Use only the source description supplied below. If evidence is missing,
+say so rather than guessing. End with a complete sentence.
+
+Topic: {item['title']}
+Category: {item['category']}
+Publisher: {item['source']}
+URL: {item['url']}
+Source description:
+{item['summary'] or '(No description provided.)'}
+"""
+
+    for attempt in range(2):
+        body = {
+            "model": cfg["model"],
+            "stream": False,
+            "think": False,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "Return only the finished Markdown lesson. "
+                        "Never output internal reasoning or task commentary."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "options": {
+                "temperature": 0.3,
+                "num_ctx": 4096,
+                "num_predict": 700,
+            },
+        }
+
+        req = urllib.request.Request(
+            cfg["ollama_url"].rstrip("/") + "/api/chat",
+            data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req, timeout=300) as r:
+            result = json.loads(r.read())
+
+        lesson = result.get("message", {}).get("content", "").strip()
+        lower = lesson.lower()
+
+        headings = [
+            "### the big idea",
+            "### imagine this",
+            "### tiny mind experiment",
+            "### why it matters",
+        ]
+        meta_phrases = [
+            "the user wants me to",
+            "i need to unpack",
+            "word count check",
+            "mental note",
+            "let me draft",
+            "checks word count",
+            "i'll make sure",
+        ]
+
+        words = re.findall(r"\b[\w’'-]+\b", lesson)
+        complete = bool(re.search(r'[.!?][\"’”)]?\s*$', lesson))
+        valid = (
+            all(h in lower for h in headings)
+            and not any(x in lower for x in meta_phrases)
+            and 130 <= len(words) <= 250
+            and complete
+        )
+
+        if valid:
+            return lesson
+
+        print(
+            f"[quality] Attempt {attempt + 1} rejected: "
+            f"headings/length/format check failed ({len(words)} words)"
+        )
+        prompt += (
+            "\n\nRewrite from scratch. Return only the complete lesson "
+            "with all four required headings. Do not include planning."
+        )
+
+    raise ValueError("Model failed lesson validation after two attempts")
+
+
+def main():
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DATA) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS seen
+                      (url TEXT PRIMARY KEY, title TEXT, date_seen REAL)""")
+
+    cfg = json.loads(CONFIG.read_text())
+    candidates = []
+    working_feeds = 0
+
+    for name, url, category in FEEDS:
+        try:
+            items = fetch_feed(name, url, category)
+            working_feeds += 1
+            print(f"[feed] {name}: {len(items)} topics")
+            for item in items:
+                with sqlite3.connect(DATA) as db:
+                    exists = db.execute(
+                        "SELECT 1 FROM seen WHERE url=?", (item["url"],)
+                    ).fetchone()
+                if not exists:
+                    candidates.append(item)
+        except Exception as e:
+            print(f"[feed] {name} skipped: {e}")
+
+    # Include curated evergreen learning topics in the same deduplicated pool.
+    for title, url, summary, source, category in EVERGREEN:
+        with sqlite3.connect(DATA) as db:
+            exists = db.execute(
+                "SELECT 1 FROM seen WHERE url=?", (url,)
+            ).fetchone()
+        if not exists:
+            candidates.append({
+                "title": title,
+                "url": url,
+                "summary": summary,
+                "date": 0,
+                "source": source,
+                "category": category,
+            })
+
+    if not candidates:
+        print("No unseen topics found. Try again later or check the feeds.")
+        return 1
+
+    # Shuffle first, then spread selections across publishers when possible.
+    random.shuffle(candidates)
+    chosen = []
+    source_counts = {}
+    for item in candidates:
+        if source_counts.get(item["source"], 0) >= 2:
+            continue
+        chosen.append(item)
+        source_counts[item["source"]] = source_counts.get(item["source"], 0) + 1
+        if len(chosen) == 5:
+            break
+
+    if len(chosen) < 5:
+        used = {x["url"] for x in chosen}
+        for item in candidates:
+            if item["url"] not in used:
+                chosen.append(item)
+                used.add(item["url"])
+            if len(chosen) == 5:
+                break
+
+    today = datetime.now().astimezone()
+    report = [
+        f"# Wonder Bites — {today.strftime('%A, %d %B %Y')}",
+        "",
+        "> Five curious ideas to make your brain do a little happy dance.",
+        "",
+        f"*Generated locally with `{cfg['model']}` · {working_feeds}/{len(FEEDS)} feeds available*",
+        "",
+        "Take your time. Pick the idea that makes you say, “Wait… what?”",
+        ""
+    ]
+
+    for i, item in enumerate(chosen, 1):
+        print(f"[lesson] {i}/5 {item['title']}")
+        try:
+            lesson = summarize(item)
+        except Exception as e:
+            lesson = (
+                "**The lesson could not be generated.**\n\n"
+                f"Reason: `{e}`\n\n"
+                f"Source description: {item['summary'] or 'Unavailable'}"
+            )
+
+        report += [
+            f"## {i}. {item['title']}",
+            "",
+            f"**Field:** {item['category']} · **Source:** {item['source']}",
+            "",
+            f"[Explore the original source]({item['url']})",
+            "",
+            lesson,
+            "",
+            "---",
+            ""
+        ]
+        with sqlite3.connect(DATA) as db:
+            db.execute(
+                "INSERT OR IGNORE INTO seen VALUES (?, ?, ?)",
+                (item["url"], item["title"], time.time())
+            )
+
+    report += [
+        "## Keep wondering",
+        "",
+        "These lessons are generated from source-feed descriptions by a small local AI model. "
+        "Use the original links to verify details, especially scientific claims and research findings.",
+        ""
+    ]
+
+    path = REPORTS / f"{today.strftime('%Y-%m-%d-%H%M%S')}.md"
+    path.write_text("\n".join(report), encoding="utf-8")
+    (REPORTS / "latest.md").write_text("\n".join(report), encoding="utf-8")
+    print(f"\nDone! Five-topic edition saved to: {path}")
+    print(f"Quick reading copy: {REPORTS / 'latest.md'}")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

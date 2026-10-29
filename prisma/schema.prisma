@@ -1,0 +1,169 @@
+// Personal Learning Hub — Prisma Schema
+// Database: PostgreSQL on Render
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── User ──────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  timezone     String   @default("Asia/Kolkata")
+  preferences  Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions     Session[]
+  readingList  ReadingListItem[]
+
+  @@map("users")
+}
+
+// ─── Session ───────────────────────────────────────────────────────────────────
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ─── Workflow ──────────────────────────────────────────────────────────────────
+
+model Workflow {
+  id                 String   @id @default(uuid())
+  slug               String   @unique
+  name               String
+  description        String   @default("")
+  enabled            Boolean  @default(true)
+  scheduleExpression String   @map("schedule_expression")
+  timezone           String   @default("Asia/Kolkata")
+  configuration      Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  entries ContentEntry[]
+  runs    WorkflowRun[]
+
+  @@map("workflows")
+}
+
+// ─── Content Entry ─────────────────────────────────────────────────────────────
+
+model ContentEntry {
+  id              String   @id @default(uuid())
+  workflowId      String   @map("workflow_id")
+  title           String
+  slug            String   @unique
+  summary         String   @default("")
+  contentMarkdown String   @map("content_markdown") @db.Text
+  contentFormat   String   @default("markdown") @map("content_format")
+  category        String   @default("")
+  tags            String[] @default([])
+  sourceUrls      String[] @default([]) @map("source_urls")
+  generatedAt     DateTime @map("generated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  revisionNumber  Int      @default(1) @map("revision_number")
+  metadata        Json     @default("{}")
+  idempotencyKey  String?  @unique @map("idempotency_key")
+
+  workflow      Workflow          @relation(fields: [workflowId], references: [id])
+  revisions     ContentRevision[]
+  readingItems  ReadingListItem[]
+
+  @@index([workflowId])
+  @@index([generatedAt])
+  @@index([category])
+  @@index([createdAt])
+  @@map("content_entries")
+}
+
+// ─── Content Revision ──────────────────────────────────────────────────────────
+
+model ContentRevision {
+  id              String   @id @default(uuid())
+  contentEntryId  String   @map("content_entry_id")
+  revisionNumber  Int      @map("revision_number")
+  previousContent String   @map("previous_content") @db.Text
+  changedAt       DateTime @default(now()) @map("changed_at")
+  changeSource    String   @default("user") @map("change_source")
+
+  contentEntry ContentEntry @relation(fields: [contentEntryId], references: [id], onDelete: Cascade)
+
+  @@index([contentEntryId, revisionNumber])
+  @@map("content_revisions")
+}
+
+// ─── Reading List Item ─────────────────────────────────────────────────────────
+
+model ReadingListItem {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  contentEntryId String    @map("content_entry_id")
+  status         String    @default("saved")
+  savedAt        DateTime  @default(now()) @map("saved_at")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  personalNote   String?   @map("personal_note") @db.Text
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentEntry ContentEntry @relation(fields: [contentEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentEntryId])
+  @@map("reading_list_items")
+}
+
+// ─── Workflow Run ──────────────────────────────────────────────────────────────
+
+model WorkflowRun {
+  id              String    @id @default(uuid())
+  workflowId      String    @map("workflow_id")
+  idempotencyKey  String    @unique @map("idempotency_key")
+  status          String    @default("queued")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  errorCode       String?   @map("error_code")
+  errorMessage    String?   @map("error_message") @db.Text
+  entriesCreated  Int       @default(0) @map("entries_created")
+  triggerSource   String    @default("mcp") @map("trigger_source")
+  metadata        Json      @default("{}")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+
+  @@index([workflowId, startedAt])
+  @@index([status])
+  @@map("workflow_runs")
+}
+
+// ─── Audit Log ─────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorType    String   @map("actor_type")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  timestamp    DateTime @default(now())
+  metadata     Json     @default("{}")
+
+  @@index([timestamp])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}

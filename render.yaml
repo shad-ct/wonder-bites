@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: wonder-bites-api
+    env: node
+    buildCommand: pnpm build:api
+    startCommand: pnpm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wonder-bites-db
+          property: connectionString
+      - key: DIRECT_URL
+        fromDatabase:
+          name: wonder-bites-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: MCP_BEARER_TOKEN
+        generateValue: true
+      - key: INITIAL_USERNAME
+        value: admin
+      - key: INITIAL_USER_PASSWORD
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://wonder-bites.netlify.app
+      - key: API_PUBLIC_URL
+        value: https://wonder-bites-api.onrender.com
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_MAX
+        value: 100
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+    healthCheckPath: /healthz
+    autoDeploy: true
+
+databases:
+  - name: wonder-bites-db
+    databaseName: wonder_bites
+    user: wonder_bites
+    plan: starter
+    ipAllowList: []

@@ -1,0 +1,16 @@
+[build]
+  base = "apps/web"
+  command = "pnpm build"
+  publish = "dist"
+
+[dev]
+  command = "pnpm dev"
+  port = 5173
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[env]
+  VITE_API_URL = "https://wonder-bites-api.onrender.com"

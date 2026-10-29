@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+import email.utils
+import html
+import json
+import random
+import re
+import sqlite3
+import time
+import urllib.request
+import urllib.error
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path.home() / "Projects/wonder-bites"
+REPORTS = ROOT / "reports"
+DATA = ROOT / "history.sqlite3"
+CONFIG = ROOT / "config.json"
+
+FEEDS = [
+    ("PsyPost", "https://www.psypost.org/feed/", "Psychology"),
+    ("Aeon", "https://aeon.co/feed.rss", "Philosophy & Ideas"),
+    ("The Marginalian", "https://www.themarginalian.org/feed/", "Philosophy & Creativity"),
+    ("Greater Good", "https://greatergood.berkeley.edu/feed", "Human Behavior"),
+    ("Psychology Today", "https://www.psychologytoday.com/us/blog/feed", "Psychology"),
+]
+
+def get(url, timeout=20):
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "WonderBites/1.0 (personal learning digest)"}
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read(1_500_000)
+
+def text(node):
+    if node is None:
+        return ""
+    return re.sub(r"\s+", " ", html.unescape(" ".join(node.itertext()))).strip()
+
+def parse_date(value):
+    if not value:
+        return 0
+    try:
+        dt = email.utils.parsedate_to_datetime(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except Exception:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return 0
+
+def fetch_feed(name, url, category):
+    root = ET.fromstring(get(url))
+    found = []
+
+    for item in root.findall(".//item"):
+        title = text(item.find("title"))
+        link = text(item.find("link"))
+        summary = text(item.find("description"))
+        published = text(item.find("pubDate"))
+        if title and link:
+            found.append({
+                "title": title, "url": link, "summary": summary[:3000],
+                "date": parse_date(published), "source": name,
+                "category": category
+            })
+
+    ns = "{http://www.w3.org/2005/Atom}"
+    for item in root.iter(ns + "entry"):
+        title = text(item.find(ns + "title"))
+        link_node = item.find(ns + "link")
+        link = link_node.attrib.get("href", "") if link_node is not None else ""
+        summary = text(item.find(ns + "summary")) or text(item.find(ns + "content"))
+        published = text(item.find(ns + "published")) or text(item.find(ns + "updated"))
+        if title and link:
+            found.append({
+                "title": title, "url": link, "summary": summary[:3000],
+                "date": parse_date(published), "source": name,
+                "category": category
+            })
+    return found
+
+def summarize(item):
+    cfg = json.loads(CONFIG.read_text())
+    prompt = f"""
+Create a FUN, accurate mini-lesson for a curious reader about this source.
+Explain the actual idea, not merely the article headline.
+
+Use these headings:
+### The big idea
+Explain in plain everyday English, as if teaching a curious 10-year-old.
+### Imagine this
+Give a funny, memorable, concrete example from ordinary life.
+### Tiny mind experiment
+Ask one intriguing question or give a small thought experiment.
+### Why it matters
+Explain how this connects to real human life.
+
+Rules:
+- Aim for 150-220 words total.
+- Explain unfamiliar terms simply.
+- Be playful, vivid and engaging, but not childish or patronizing.
+- Never invent study results, quotes, statistics, or conclusions.
+- Distinguish established evidence from speculation and philosophical opinion.
+- If the source summary is insufficient, explicitly say what remains unclear.
+- Do not claim to have read information absent from the supplied material.
+
+Topic: {item['title']}
+Category: {item['category']}
+Publisher: {item['source']}
+Original URL: {item['url']}
+Available source description:
+{item['summary'] or '(No description provided by feed.)'}
+"""
+    body = {
+        "model": cfg["model"],
+        "stream": False,
+        "think": False,
+        "messages": [
+            {"role": "system", "content":
+             "You are Wonder Bites: a playful, careful teacher of psychology, philosophy and human ideas."},
+            {"role": "user", "content": prompt}
+        ],
+        "options": {"temperature": 0.65, "num_ctx": 4096, "num_predict": 420}
+    }
+    req = urllib.request.Request(
+        cfg["ollama_url"].rstrip("/") + "/api/chat",
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=240) as r:
+        result = json.loads(r.read())
+    return result.get("message", {}).get("content", "").strip()
+
+def main():
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DATA) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS seen
+                      (url TEXT PRIMARY KEY, title TEXT, date_seen REAL)""")
+
+    cfg = json.loads(CONFIG.read_text())
+    candidates = []
+    working_feeds = 0
+
+    for name, url, category in FEEDS:
+        try:
+            items = fetch_feed(name, url, category)
+            working_feeds += 1
+            print(f"[feed] {name}: {len(items)} topics")
+            for item in items:
+                with sqlite3.connect(DATA) as db:
+                    exists = db.execute(
+                        "SELECT 1 FROM seen WHERE url=?", (item["url"],)
+                    ).fetchone()
+                if not exists:
+                    candidates.append(item)
+        except Exception as e:
+            print(f"[feed] {name} skipped: {e}")
+
+    if not candidates:
+        print("No unseen topics found. Try again later or check the feeds.")
+        return 1
+
+    # Shuffle first, then spread selections across publishers when possible.
+    random.shuffle(candidates)
+    chosen = []
+    source_counts = {}
+    for item in candidates:
+        if source_counts.get(item["source"], 0) >= 2:
+            continue
+        chosen.append(item)
+        source_counts[item["source"]] = source_counts.get(item["source"], 0) + 1
+        if len(chosen) == 5:
+            break
+
+    if len(chosen) < 5:
+        used = {x["url"] for x in chosen}
+        for item in candidates:
+            if item["url"] not in used:
+                chosen.append(item)
+                used.add(item["url"])
+            if len(chosen) == 5:
+                break
+
+    today = datetime.now().astimezone()
+    report = [
+        f"# Wonder Bites — {today.strftime('%A, %d %B %Y')}",
+        "",
+        "> Five curious ideas to make your brain do a little happy dance.",
+        "",
+        f"*Generated locally with `{cfg['model']}` · {working_feeds}/{len(FEEDS)} feeds available*",
+        "",
+        "Take your time. Pick the idea that makes you say, “Wait… what?”",
+        ""
+    ]
+
+    for i, item in enumerate(chosen, 1):
+        print(f"[lesson] {i}/5 {item['title']}")
+        try:
+            lesson = summarize(item)
+        except Exception as e:
+            lesson = (
+                "**The lesson could not be generated.**\n\n"
+                f"Reason: `{e}`\n\n"
+                f"Source description: {item['summary'] or 'Unavailable'}"
+            )
+
+        report += [
+            f"## {i}. {item['title']}",
+            "",
+            f"**Field:** {item['category']} · **Source:** {item['source']}",
+            "",
+            f"[Explore the original source]({item['url']})",
+            "",
+            lesson,
+            "",
+            "---",
+            ""
+        ]
+        with sqlite3.connect(DATA) as db:
+            db.execute(
+                "INSERT OR IGNORE INTO seen VALUES (?, ?, ?)",
+                (item["url"], item["title"], time.time())
+            )
+
+    report += [
+        "## Keep wondering",
+        "",
+        "These lessons are generated from source-feed descriptions by a small local AI model. "
+        "Use the original links to verify details, especially scientific claims and research findings.",
+        ""
+    ]
+
+    path = REPORTS / f"{today.strftime('%Y-%m-%d-%H%M%S')}.md"
+    path.write_text("\n".join(report), encoding="utf-8")
+    (REPORTS / "latest.md").write_text("\n".join(report), encoding="utf-8")
+    print(f"\nDone! Five-topic edition saved to: {path}")
+    print(f"Quick reading copy: {REPORTS / 'latest.md'}")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
