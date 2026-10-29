@@ -29,6 +29,16 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 
+// Only allow http/https URLs — blocks file:// and other dangerous schemes
+const isSafeHttpUrl = (url: string): boolean => {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 // Extend sanitize schema so math and table classes don't get stripped
 const sanitizeSchema = {
   ...defaultSchema,
@@ -352,19 +362,21 @@ export function EntryDetailPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-xs">
-              {entry.sourceUrls.map((url, idx) => (
-                <li key={idx} className="flex items-center gap-2">
-                  <span className="text-muted-foreground">{idx + 1}.</span>
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline truncate"
-                  >
-                    {url}
-                  </a>
-                </li>
-              ))}
+              {entry.sourceUrls
+                .filter(isSafeHttpUrl)
+                .map((url, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{idx + 1}.</span>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline truncate"
+                    >
+                      {url}
+                    </a>
+                  </li>
+                ))}
             </ul>
           </CardContent>
         </Card>
