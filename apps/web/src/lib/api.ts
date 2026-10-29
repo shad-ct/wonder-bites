@@ -11,7 +11,7 @@ import type {
   UserSettings,
 } from '@wonder-bites/shared';
 
-const BASE_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'https://wonder-bites-api.onrender.com') + '/api/v1';
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) || 'https://wonder-bites-api.onrender.com';
 
 export class ApiError extends Error {
   status: number;
@@ -126,7 +126,7 @@ function buildQuery(params: Record<string, unknown> = {}): string {
 export const api = {
   auth: {
     login: async (username: string, password: string): Promise<ApiResponse<{ user: UserResponse; token?: string }>> => {
-      const res = await request<ApiResponse<{ user: UserResponse; token?: string }>>('/api/auth/login', {
+      const res = await request<ApiResponse<{ user: UserResponse; token?: string }>>('/api/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       });
@@ -137,7 +137,7 @@ export const api = {
     },
     logout: async (): Promise<ApiResponse<{ message: string }>> => {
       try {
-        return await request<ApiResponse<{ message: string }>>('/api/auth/logout', {
+        return await request<ApiResponse<{ message: string }>>('/api/v1/auth/logout', {
           method: 'POST',
         });
       } finally {
@@ -145,13 +145,13 @@ export const api = {
       }
     },
     getMe: async (): Promise<ApiResponse<UserResponse>> => {
-      return request<ApiResponse<UserResponse>>('/api/auth/me');
+      return request<ApiResponse<UserResponse>>('/api/v1/auth/me');
     },
   },
 
   dashboard: {
     getSummary: async (): Promise<ApiResponse<DashboardSummary>> => {
-      return request<ApiResponse<DashboardSummary>>('/api/dashboard/summary');
+      return request<ApiResponse<DashboardSummary>>('/api/v1/dashboard/summary');
     },
   },
 
@@ -170,13 +170,13 @@ export const api = {
       endDate?: string;
     }): Promise<PaginatedResponse<ContentEntryResponse>> => {
       const query = buildQuery(params);
-      return request<PaginatedResponse<ContentEntryResponse>>(`/api/content${query}`);
+      return request<PaginatedResponse<ContentEntryResponse>>(`/api/v1/content${query}`);
     },
     get: async (id: string): Promise<ApiResponse<ContentEntryResponse>> => {
-      return request<ApiResponse<ContentEntryResponse>>(`/api/content/${id}`);
+      return request<ApiResponse<ContentEntryResponse>>(`/api/v1/content/${id}`);
     },
     search: async (queryText: string): Promise<PaginatedResponse<ContentEntryResponse>> => {
-      return request<PaginatedResponse<ContentEntryResponse>>(`/api/content/search${buildQuery({ q: queryText })}`);
+      return request<PaginatedResponse<ContentEntryResponse>>(`/api/v1/content/search${buildQuery({ q: queryText })}`);
     },
     update: async (
       id: string,
@@ -188,13 +188,13 @@ export const api = {
         category?: string;
       }
     ): Promise<ApiResponse<ContentEntryResponse>> => {
-      return request<ApiResponse<ContentEntryResponse>>(`/api/content/${id}`, {
+      return request<ApiResponse<ContentEntryResponse>>(`/api/v1/content/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
     },
     getRevisions: async (id: string): Promise<ApiResponse<ContentRevisionResponse[]>> => {
-      return request<ApiResponse<ContentRevisionResponse[]>>(`/api/content/${id}/revisions`);
+      return request<ApiResponse<ContentRevisionResponse[]>>(`/api/v1/content/${id}/revisions`);
     },
   },
 
@@ -206,10 +206,10 @@ export const api = {
       sort?: string;
     }): Promise<PaginatedResponse<ReadingListItemResponse>> => {
       const query = buildQuery(params);
-      return request<PaginatedResponse<ReadingListItemResponse>>(`/api/reading-list${query}`);
+      return request<PaginatedResponse<ReadingListItemResponse>>(`/api/v1/reading-list${query}`);
     },
     add: async (contentEntryId: string, personalNote?: string): Promise<ApiResponse<ReadingListItemResponse>> => {
-      return request<ApiResponse<ReadingListItemResponse>>('/api/reading-list', {
+      return request<ApiResponse<ReadingListItemResponse>>('/api/v1/reading-list', {
         method: 'POST',
         body: JSON.stringify({ contentEntryId, personalNote }),
       });
@@ -221,13 +221,13 @@ export const api = {
         personalNote?: string | null;
       }
     ): Promise<ApiResponse<ReadingListItemResponse>> => {
-      return request<ApiResponse<ReadingListItemResponse>>(`/api/reading-list/${id}`, {
+      return request<ApiResponse<ReadingListItemResponse>>(`/api/v1/reading-list/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
     },
     remove: async (id: string): Promise<ApiResponse<{ success: boolean }>> => {
-      return request<ApiResponse<{ success: boolean }>>(`/api/reading-list/${id}`, {
+      return request<ApiResponse<{ success: boolean }>>(`/api/v1/reading-list/${id}`, {
         method: 'DELETE',
       });
     },
@@ -235,10 +235,10 @@ export const api = {
 
   workflows: {
     list: async (): Promise<ApiResponse<WorkflowResponse[]>> => {
-      return request<ApiResponse<WorkflowResponse[]>>('/api/workflows');
+      return request<ApiResponse<WorkflowResponse[]>>('/api/v1/workflows');
     },
     get: async (slug: string): Promise<ApiResponse<WorkflowResponse>> => {
-      return request<ApiResponse<WorkflowResponse>>(`/api/workflows/${slug}`);
+      return request<ApiResponse<WorkflowResponse>>(`/api/v1/workflows/${slug}`);
     },
     update: async (
       slug: string,
@@ -249,13 +249,13 @@ export const api = {
         configuration?: Record<string, unknown>;
       }
     ): Promise<ApiResponse<WorkflowResponse>> => {
-      return request<ApiResponse<WorkflowResponse>>(`/api/workflows/${slug}`, {
+      return request<ApiResponse<WorkflowResponse>>(`/api/v1/workflows/${slug}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
     },
     trigger: async (slug: string): Promise<ApiResponse<WorkflowRunResponse>> => {
-      return request<ApiResponse<WorkflowRunResponse>>(`/api/workflows/${slug}/trigger`, {
+      return request<ApiResponse<WorkflowRunResponse>>(`/api/v1/workflows/${slug}/trigger`, {
         method: 'POST',
       });
     },
@@ -272,40 +272,40 @@ export const api = {
       endDate?: string;
     }): Promise<PaginatedResponse<WorkflowRunResponse>> => {
       const query = buildQuery(params);
-      return request<PaginatedResponse<WorkflowRunResponse>>(`/api/workflow-runs${query}`);
+      return request<PaginatedResponse<WorkflowRunResponse>>(`/api/v1/workflow-runs${query}`);
     },
     get: async (id: string): Promise<ApiResponse<WorkflowRunResponse>> => {
-      return request<ApiResponse<WorkflowRunResponse>>(`/api/workflow-runs/${id}`);
+      return request<ApiResponse<WorkflowRunResponse>>(`/api/v1/workflow-runs/${id}`);
     },
   },
 
   settings: {
     get: async (): Promise<ApiResponse<UserSettings>> => {
-      return request<ApiResponse<UserSettings>>('/api/settings');
+      return request<ApiResponse<UserSettings>>('/api/v1/settings');
     },
     update: async (data: Partial<UserSettings>): Promise<ApiResponse<UserSettings>> => {
-      return request<ApiResponse<UserSettings>>('/api/settings', {
+      return request<ApiResponse<UserSettings>>('/api/v1/settings', {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
     },
     health: async (): Promise<ApiResponse<{ status: string; mcp: { status: string; serverCount: number } }>> => {
-      return request<ApiResponse<{ status: string; mcp: { status: string; serverCount: number } }>>('/api/health');
+      return request<ApiResponse<{ status: string; mcp: { status: string; serverCount: number } }>>('/api/v1/health');
     },
   },
 
   export: {
     entry: async (id: string): Promise<void> => {
-      return downloadFile(`/api/export/entry/${id}`, `entry-${id}.md`);
+      return downloadFile(`/api/v1/export/entry/${id}`, `entry-${id}.md`);
     },
     workflow: async (slug: string, format: 'markdown' | 'json' = 'markdown'): Promise<void> => {
-      return downloadFile(`/api/export/workflow/${slug}?format=${format}`, `${slug}-export.${format === 'json' ? 'json' : 'zip'}`);
+      return downloadFile(`/api/v1/export/workflow/${slug}?format=${format}`, `${slug}-export.${format === 'json' ? 'json' : 'zip'}`);
     },
     library: async (): Promise<void> => {
-      return downloadFile('/api/export/library', 'learning-hub-library.zip');
+      return downloadFile('/api/v1/export/library', 'learning-hub-library.zip');
     },
     readingList: async (): Promise<void> => {
-      return downloadFile('/api/export/reading-list', 'reading-list.md');
+      return downloadFile('/api/v1/export/reading-list', 'reading-list.md');
     },
   },
 };
