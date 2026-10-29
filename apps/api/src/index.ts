@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
@@ -111,6 +112,17 @@ export async function buildServer() {
  * Start the Fastify server and attach process signal handlers.
  */
 async function start() {
+  // Run Prisma migrations on startup (ensures schema exists even if pre-deploy skipped)
+  try {
+    execSync('npx prisma migrate deploy --schema=prisma/schema.prisma', {
+      stdio: 'inherit',
+      env: { ...process.env },
+    });
+    console.log('Migrations applied successfully');
+  } catch (err) {
+    console.error('Migration failed:', err instanceof Error ? err.message : err);
+  }
+
   const server = await buildServer();
 
   // Ensure default workflows exist in DB
