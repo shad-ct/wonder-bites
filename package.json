@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --parallel --filter @wonder-bites/api --filter @wonder-bites/web dev",
+    "start": "pnpm --filter @wonder-bites/api start",
+  "dev": "pnpm --parallel --filter @wonder-bites/api --filter @wonder-bites/web dev",
     "dev:api": "pnpm --filter @wonder-bites/api dev",
     "dev:web": "pnpm --filter @wonder-bites/web dev",
     "build": "pnpm --filter @wonder-bites/shared build && pnpm --parallel --filter @wonder-bites/api --filter @wonder-bites/web build",

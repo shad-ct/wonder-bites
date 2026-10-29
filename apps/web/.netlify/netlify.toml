@@ -1,0 +1,47 @@
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[dev]
+command = "pnpm dev"
+port = 5173.0
+
+[env]
+VITE_API_URL = "https://wonder-bites-api.onrender.com"
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "/home/mrrobot/Projects/wonder-bites/apps/web/dist"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "pnpm build"
+base = "/home/mrrobot/Projects/wonder-bites/apps/web"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
