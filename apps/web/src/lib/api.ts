@@ -11,7 +11,7 @@ import type {
   UserSettings,
 } from '@wonder-bites/shared';
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) || '';
+const BASE_URL = ((import.meta.env.VITE_API_URL as string | undefined) || '') + '/api/v1';
 
 export class ApiError extends Error {
   status: number;
