@@ -10,6 +10,7 @@ import { authPlugin } from './middleware/auth.js';
 import { apiRoutes } from './routes/index.js';
 import { mcpPlugin } from './mcp/server.js';
 import { ensureWorkflowsExist } from './services/workflow.service.js';
+import { ensureDefaultUser } from './services/user.service.js';
 
 const PORT = Number(process.env.PORT) || 3001;
 const HOST = '0.0.0.0';
@@ -117,6 +118,13 @@ async function start() {
     await ensureWorkflowsExist();
   } catch (err) {
     server.log.warn({ err }, 'Could not initialize default workflows at startup');
+  }
+
+  // Ensure default admin user exists
+  try {
+    await ensureDefaultUser();
+  } catch (err) {
+    server.log.warn({ err }, 'Could not ensure default user at startup');
   }
 
   // Graceful shutdown handling

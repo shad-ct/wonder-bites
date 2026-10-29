@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "pnpm --filter @wonder-bites/api start",
-  "dev": "pnpm --parallel --filter @wonder-bites/api --filter @wonder-bites/web dev",
+    "dev": "pnpm --parallel --filter @wonder-bites/api --filter @wonder-bites/web dev",
     "dev:api": "pnpm --filter @wonder-bites/api dev",
     "dev:web": "pnpm --filter @wonder-bites/web dev",
     "build": "pnpm --filter @wonder-bites/shared build && pnpm --parallel --filter @wonder-bites/api --filter @wonder-bites/web build",
@@ -28,7 +28,8 @@
     "typescript": "^5.6.0"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0"
+    "@prisma/client": "^6.1.0",
+    "argon2": "^0.41.1"
   },
   "engines": {
     "node": ">=20.0.0",
