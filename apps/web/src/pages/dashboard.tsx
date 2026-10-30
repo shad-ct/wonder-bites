@@ -6,9 +6,7 @@ import {
   CheckCircle,
   Bookmark,
   Calendar,
-  Zap,
   ArrowRight,
-  AlertTriangle,
   RefreshCw,
   Clock,
   Sparkles,
@@ -106,26 +104,6 @@ export function DashboardPage() {
           </Button>
         </div>
       </div>
-
-      {/* Failed Runs Warning Banner */}
-      {summary?.failedRuns && summary.failedRuns.length > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-destructive shadow-sm animate-fade-in">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">
-                {summary.failedRuns.length} workflow {summary.failedRuns.length === 1 ? 'run has' : 'runs have'} failed
-              </p>
-              <p className="text-xs text-destructive/80 mt-0.5">
-                Check the execution history for error details and stack traces.
-              </p>
-            </div>
-          </div>
-          <Button asChild variant="outline" size="sm" className="border-destructive/30 hover:bg-destructive/15 text-destructive">
-            <Link to="/history?status=failed">View Failures</Link>
-          </Button>
-        </div>
-      )}
 
       {/* Error state */}
       {error && (
@@ -235,26 +213,6 @@ export function DashboardPage() {
             <p className="text-xs text-muted-foreground mt-1">Freshly delivered today</p>
           </CardContent>
         </Card>
-
-        {/* Active Workflows */}
-        <Card className="relative overflow-hidden border-border/80 bg-gradient-to-br from-card via-card to-indigo-500/5 hover:border-indigo-500/30 transition-all duration-200 hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Workflows</CardTitle>
-            <div className="h-9 w-9 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-              <Zap className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold tracking-tight">
-              {loading ? (
-                <div className="h-9 w-16 bg-muted animate-pulse rounded" />
-              ) : (
-                summary?.activeWorkflows ?? 0
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Scheduled automated feeds</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Two-column layout: Recent Content & Latest Executions */}
@@ -309,65 +267,6 @@ export function DashboardPage() {
             ) : (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 No content entries yet. Trigger a workflow to get started!
-              </div>
-            )}
-          </Card>
-        </div>
-
-        {/* Latest Executions */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Latest Executions</h2>
-            <Button asChild variant="ghost" size="sm" className="text-xs text-primary gap-1">
-              <Link to="/history">
-                View all <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
-
-          <Card className="border-border/80 overflow-hidden">
-            {loading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-12 bg-muted/60 animate-pulse rounded-lg" />
-                ))}
-              </div>
-            ) : summary?.latestRuns && summary.latestRuns.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wider border-b border-border">
-                    <tr>
-                      <th className="p-3">Workflow</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Entries</th>
-                      <th className="p-3 text-right">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {summary.latestRuns.slice(0, 5).map((run) => (
-                      <tr key={run.id} className="hover:bg-accent/30 transition-colors">
-                        <td className="p-3 font-medium text-xs text-foreground">
-                          {run.workflow?.name || run.workflowId || 'Workflow'}
-                        </td>
-                        <td className="p-3">
-                          <Badge variant={getStatusBadgeVariant(run.status)} className="capitalize text-[10px]">
-                            {run.status}
-                          </Badge>
-                        </td>
-                        <td className="p-3 text-xs text-muted-foreground">
-                          +{run.entriesCreated || 0}
-                        </td>
-                        <td className="p-3 text-right text-xs text-muted-foreground">
-                          {formatRelativeTime(run.startedAt)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                No execution history recorded yet.
               </div>
             )}
           </Card>

@@ -14,7 +14,7 @@ VITE_API_URL = "https://wonder-bites-api.onrender.com"
 [functions."*"]
 
 [build]
-publish = "/home/mrrobot/Projects/wonder-bites/apps/web/dist"
+publish = "/home/mrrobot/Projects/wonder-bites/dist"
 publishOrigin = "config"
 commandOrigin = "config"
 command = "pnpm build"

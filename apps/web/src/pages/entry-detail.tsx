@@ -19,6 +19,7 @@ import {
   Edit3,
   Save,
   Check,
+  Trash2,
 } from 'lucide-react';
 import type { ContentEntryResponse, ContentRevisionResponse } from '@wonder-bites/shared';
 import { api } from '@/lib/api';
@@ -165,6 +166,22 @@ export function EntryDetailPage() {
     }
   };
 
+  const handleDeleteArticle = async () => {
+    if (!id || !entry) return;
+    if (!confirm(`Delete the article "${entry.title}" permanently? This cannot be undone.`)) return;
+    try {
+      await api.content.delete(id);
+      toast({ title: 'Article deleted', description: 'The article has been permanently deleted.' });
+      navigate(-1);
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete article.',
+      });
+    }
+  };
+
   const handleSaveNote = async () => {
     if (!entry?.readingListItem?.id) {
       // First save to reading list if not yet saved
@@ -241,6 +258,18 @@ export function EntryDetailPage() {
           >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Export</span>
+          </Button>
+
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteArticle}
+            disabled={actionLoading}
+            className="gap-1.5"
+            title="Delete article"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Delete Article</span>
           </Button>
 
           <Button

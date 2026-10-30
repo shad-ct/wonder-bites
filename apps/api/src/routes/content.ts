@@ -13,6 +13,7 @@ import {
   updateContentEntry,
   getContentRevisions,
   publishContentEntry,
+  deleteContentEntry,
 } from '../services/content.service.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -176,5 +177,27 @@ export const contentRoutes: FastifyPluginAsync = async (fastify) => {
         code: 'NOT_FOUND',
       });
     }
+  });
+
+  /**
+   * DELETE /content/:id
+   * Delete a content entry (article) and its related records.
+   */
+  fastify.delete('/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const deleted = await deleteContentEntry(id, request.user!.id);
+
+    if (!deleted) {
+      return reply.status(404).send({
+        success: false,
+        error: `Content entry "${id}" not found`,
+        code: 'NOT_FOUND',
+      });
+    }
+
+    return {
+      success: true,
+      data: { message: 'Article deleted' },
+    };
   });
 };

@@ -14,7 +14,7 @@ import {
   Bookmark,
   CheckCircle,
 } from 'lucide-react';
-import type { ContentEntryResponse, WorkflowResponse } from '@wonder-bites/shared';
+import type { ContentEntryResponse } from '@wonder-bites/shared';
 import { api } from '@/lib/api';
 import { formatDate, estimateReadingTime } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -33,10 +33,8 @@ export function LibraryPage() {
   const navigate = useNavigate();
 
   const [entries, setEntries] = useState<ContentEntryResponse[]>([]);
-  const [workflows, setWorkflows] = useState<WorkflowResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [workflowFilter, setWorkflowFilter] = useState('all');
   const [readFilter, setReadFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -47,19 +45,6 @@ export function LibraryPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Load workflows for filter dropdown
-  useEffect(() => {
-    async function loadWorkflows() {
-      try {
-        const res = await api.workflows.list();
-        if (res.data) setWorkflows(res.data);
-      } catch (err) {
-        console.error('Failed to load workflows:', err);
-      }
-    }
-    loadWorkflows();
-  }, []);
-
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     try {
@@ -69,7 +54,6 @@ export function LibraryPage() {
       };
 
       if (search.trim()) params.search = search.trim();
-      if (workflowFilter !== 'all') params.workflow = workflowFilter;
       if (categoryFilter !== 'all') params.category = categoryFilter;
       if (readFilter === 'read') params.isRead = true;
       if (readFilter === 'unread') params.isRead = false;
@@ -85,7 +69,7 @@ export function LibraryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, workflowFilter, readFilter, categoryFilter]);
+  }, [page, pageSize, search, readFilter, categoryFilter]);
 
   useEffect(() => {
     fetchEntries();
@@ -99,7 +83,6 @@ export function LibraryPage() {
 
   const handleClearFilters = () => {
     setSearch('');
-    setWorkflowFilter('all');
     setReadFilter('all');
     setCategoryFilter('all');
     setPage(1);
@@ -161,29 +144,6 @@ export function LibraryPage() {
             <span>Filters:</span>
           </div>
 
-          {/* Workflow Filter */}
-          <div className="w-48">
-            <Select
-              value={workflowFilter}
-              onValueChange={(val) => {
-                setWorkflowFilter(val);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="All Workflows" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Workflows</SelectItem>
-                {workflows.map((wf) => (
-                  <SelectItem key={wf.id} value={wf.slug}>
-                    {wf.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Read Status Filter */}
           <div className="w-36">
             <Select
@@ -204,7 +164,7 @@ export function LibraryPage() {
             </Select>
           </div>
 
-          {(search || workflowFilter !== 'all' || readFilter !== 'all') && (
+          {(search || readFilter !== 'all') && (
             <Button
               variant="ghost"
               size="sm"

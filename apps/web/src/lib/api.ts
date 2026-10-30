@@ -196,6 +196,11 @@ export const api = {
     getRevisions: async (id: string): Promise<ApiResponse<ContentRevisionResponse[]>> => {
       return request<ApiResponse<ContentRevisionResponse[]>>(`/api/v1/content/${id}/revisions`);
     },
+    delete: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+      return request<ApiResponse<{ message: string }>>(`/api/v1/content/${id}`, {
+        method: 'DELETE',
+      });
+    },
   },
 
   readingList: {

@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   BookmarkCheck,
   Library,
-  Workflow,
-  History,
   Settings,
   LogOut,
   Moon,
@@ -48,18 +46,6 @@ export const NAV_ITEMS = [
     title: 'Library',
     href: '/library',
     icon: Library,
-    exact: false,
-  },
-  {
-    title: 'Workflows',
-    href: '/workflows',
-    icon: Workflow,
-    exact: false,
-  },
-  {
-    title: 'History',
-    href: '/history',
-    icon: History,
     exact: false,
   },
   {

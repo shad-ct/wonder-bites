@@ -20,7 +20,7 @@ export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60; // 7 days in seconds
 export const getCookieOptions = () => ({
   path: '/',
   httpOnly: true,
-  sameSite: 'lax' as const,
+  sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
   secure: process.env.NODE_ENV === 'production',
   maxAge: SESSION_DURATION_SECONDS,
 });
@@ -86,7 +86,17 @@ export const authPlugin: FastifyPluginAsync = async (fastify) => {
     request.user = null;
     request.session = null;
 
-    const token = request.cookies?.[SESSION_COOKIE_NAME];
+    let token = request.cookies?.[SESSION_COOKIE_NAME];
+
+    if (!token) {
+      // Fallback: Authorization: Bearer <token> header (useful for cross-origin
+      // clients that cannot rely on SameSite=None cookies)
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7).trim();
+      }
+    }
+
     if (!token) {
       return;
     }

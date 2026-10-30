@@ -114,6 +114,24 @@ export function ReadingListPage() {
     }
   };
 
+  const handleDeleteArticle = async (id: string, title: string) => {
+    if (!confirm(`Delete the article "${title}" permanently? This cannot be undone.`)) return;
+    try {
+      await api.content.delete(id);
+      setItems((prev) => prev.filter((item) => item.contentEntry?.id !== id));
+      toast({
+        title: 'Article deleted',
+        description: 'The article has been permanently deleted.',
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete article.',
+      });
+    }
+  };
+
   const handleStartEditNote = (item: ReadingListItemResponse) => {
     setEditingNoteId(item.id);
     setNoteDraft(item.personalNote || '');
@@ -260,6 +278,16 @@ export function ReadingListPage() {
                       onClick={() => handleRemove(item.id)}
                       className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8"
                       title="Remove from reading list"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleDeleteArticle(entry.id, entry.title)}
+                      className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8"
+                      title="Delete article permanently"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

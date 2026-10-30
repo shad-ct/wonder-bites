@@ -3,7 +3,6 @@ import {
   Settings,
   User,
   Palette,
-  Clock,
   Download,
   Activity,
   Save,
@@ -16,7 +15,7 @@ import {
   Server,
   Zap,
 } from 'lucide-react';
-import type { WorkflowResponse, UserSettings } from '@wonder-bites/shared';
+import type { UserSettings } from '@wonder-bites/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme, type Theme } from '@/hooks/use-theme';
@@ -54,13 +53,8 @@ export function SettingsPage() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [workflows, setWorkflows] = useState<WorkflowResponse[]>([]);
-  const [schedules, setSchedules] = useState<Record<string, { schedule: string; enabled: boolean }>>({});
-
-  // Profile Form
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingSchedules, setSavingSchedules] = useState(false);
 
   // System Health
   const [healthStatus, setHealthStatus] = useState<{
@@ -72,22 +66,7 @@ export function SettingsPage() {
   const loadSettingsData = useCallback(async () => {
     setLoading(true);
     try {
-      const [wfRes, settingsRes] = await Promise.all([
-        api.workflows.list(),
-        api.settings.get().catch(() => null),
-      ]);
-
-      if (wfRes.data) {
-        setWorkflows(wfRes.data);
-        const schedMap: Record<string, { schedule: string; enabled: boolean }> = {};
-        wfRes.data.forEach((w) => {
-          schedMap[w.slug] = {
-            schedule: w.scheduleExpression,
-            enabled: w.enabled,
-          };
-        });
-        setSchedules(schedMap);
-      }
+      const settingsRes = await api.settings.get().catch(() => null);
 
       if (settingsRes?.data?.timezone) {
         setTimezone(settingsRes.data.timezone);
@@ -139,34 +118,6 @@ export function SettingsPage() {
       });
     } finally {
       setSavingProfile(false);
-    }
-  };
-
-  const handleSaveSchedules = async () => {
-    setSavingSchedules(true);
-    try {
-      const promises = workflows.map((wf) => {
-        const item = schedules[wf.slug];
-        if (!item) return Promise.resolve();
-        return api.workflows.update(wf.slug, {
-          scheduleExpression: item.schedule,
-          enabled: item.enabled,
-        });
-      });
-      await Promise.all(promises);
-      toast({
-        title: 'Schedules Saved',
-        description: 'All 7 workflow cron schedules have been updated.',
-      });
-      loadSettingsData();
-    } catch {
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: 'Failed to update some workflow schedules.',
-      });
-    } finally {
-      setSavingSchedules(false);
     }
   };
 
@@ -306,93 +257,6 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Section 3: Workflow Schedules */}
-        <Card className="border-border/80">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              <span>Workflow Automation Schedules</span>
-            </CardTitle>
-            <CardDescription>
-              Configure the execution schedules (cron format) and enabled state for all 7 feeds.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {workflows.map((wf) => {
-              const current = schedules[wf.slug] || {
-                schedule: wf.scheduleExpression,
-                enabled: wf.enabled,
-              };
-
-              return (
-                <div
-                  key={wf.id || wf.slug}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3.5 rounded-lg border border-border/80 bg-accent/20"
-                >
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <span className="font-semibold text-sm text-foreground block">
-                      {wf.name}
-                    </span>
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {wf.slug}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="w-36">
-                      <Input
-                        value={current.schedule}
-                        onChange={(e) =>
-                          setSchedules((prev) => ({
-                            ...prev,
-                            [wf.slug]: {
-                              schedule: e.target.value,
-                              enabled: current.enabled,
-                            },
-                          }))
-                        }
-                        className="h-8 font-mono text-xs"
-                        placeholder="Cron expression"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`toggle-${wf.slug}`}
-                        checked={current.enabled}
-                        onChange={(e) =>
-                          setSchedules((prev) => ({
-                            ...prev,
-                            [wf.slug]: {
-                              schedule: current.schedule,
-                              enabled: e.target.checked,
-                            },
-                          }))
-                        }
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`toggle-${wf.slug}`} className="text-xs cursor-pointer">
-                        {current.enabled ? 'Enabled' : 'Paused'}
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-          <CardFooter className="pt-2 border-t border-border/60">
-            <Button
-              size="sm"
-              onClick={handleSaveSchedules}
-              disabled={savingSchedules}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              <span>{savingSchedules ? 'Saving...' : 'Save All Schedules'}</span>
-            </Button>
-          </CardFooter>
-        </Card>
 
         {/* Section 4: Export & Backup */}
         <Card className="border-border/80">

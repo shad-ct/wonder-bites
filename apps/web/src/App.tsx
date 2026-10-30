@@ -12,9 +12,6 @@ import { DashboardPage } from '@/pages/dashboard';
 import { LibraryPage } from '@/pages/library';
 import { EntryDetailPage } from '@/pages/entry-detail';
 import { ReadingListPage } from '@/pages/reading-list';
-import { WorkflowsPage } from '@/pages/workflows';
-import { WorkflowDetailPage } from '@/pages/workflow-detail';
-import { ExecutionHistoryPage } from '@/pages/execution-history';
 import { SettingsPage } from '@/pages/settings';
 
 /**
@@ -51,9 +48,6 @@ export function App() {
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/library/:id" element={<EntryDetailPage />} />
               <Route path="/reading-list" element={<ReadingListPage />} />
-              <Route path="/workflows" element={<WorkflowsPage />} />
-              <Route path="/workflows/:slug" element={<WorkflowDetailPage />} />
-              <Route path="/history" element={<ExecutionHistoryPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
 

@@ -460,6 +460,21 @@ export async function searchContent(
 }
 
 /**
+ * Delete a content entry and all its related records (revisions, reading list items, audit logs).
+ */
+export async function deleteContentEntry(id: string, userId: string): Promise<boolean> {
+  const existing = await prisma.contentEntry.findUnique({ where: { id } });
+  if (!existing) return false;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.auditLog.deleteMany({ where: { resourceType: 'content_entry', resourceId: id } });
+    await tx.contentEntry.delete({ where: { id } });
+  });
+
+  return true;
+}
+
+/**
  * Get recent content entries within lookback window.
  */
 export async function getRecentEntries(
