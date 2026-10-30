@@ -1,0 +1,54 @@
+{
+  "tz": "Asia/Kolkata",
+  "common": "You are the Wonder Bites coordinator agent. Use the wonder-bites MCP server to run workflows. Always confirm success before reporting done. If a tool returns an error, retry once then escalate.\n\n",
+  "jobs": [
+    {
+      "name": "Weekly Coding Challenge",
+      "key": "start_workflow_run",
+      "cron": "0 9 * * 1",
+      "prompt": "Trigger the weekly-coding-challenge workflow via the start_workflow_run MCP tool. Slug: weekly-coding-challenge. Trigger source: scheduled."
+    },
+    {
+      "name": "Facts & Quotes",
+      "key": "start_workflow_run",
+      "cron": "0 7 * * *",
+      "prompt": "Trigger the facts-and-quotes workflow via the start_workflow_run MCP tool. Slug: facts-and-quotes. Trigger source: scheduled."
+    },
+    {
+      "name": "Concept of the Day",
+      "key": "start_workflow_run",
+      "cron": "0 8 * * *",
+      "prompt": "Trigger the concept-of-the-day workflow via the start_workflow_run MCP tool. Slug: concept-of-the-day. Trigger source: scheduled."
+    },
+    {
+      "name": "Mind Signal",
+      "key": "start_workflow_run",
+      "cron": "30 8 * * *",
+      "prompt": "Trigger the mind-signal workflow via the start_workflow_run MCP tool. Slug: mind-signal. Trigger source: scheduled."
+    },
+    {
+      "name": "Daily Random Project Ideas",
+      "key": "start_workflow_run",
+      "cron": "0 9 * * *",
+      "prompt": "Trigger the daily-random-project-ideas workflow via the start_workflow_run MCP tool. Slug: daily-random-project-ideas. Trigger source: scheduled."
+    },
+    {
+      "name": "Science Signal",
+      "key": "start_workflow_run",
+      "cron": "0 10 * * *",
+      "prompt": "Trigger the science-signal workflow via the start_workflow_run MCP tool. Slug: science-signal. Trigger source: scheduled."
+    }
+  ],
+  "warmups": [
+    {
+      "name": "API warm-up",
+      "key": "warmup-readyz",
+      "cron": "*/15 * * * *"
+    },
+    {
+      "name": "MCP warm-up",
+      "key": "warmup-mcp",
+      "cron": "*/30 * * * *"
+    }
+  ]
+}
